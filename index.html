@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Microtonal Slider Buttons</title>
+  <link rel="stylesheet" href="style.css">
+  <link rel="manifest" href="manifest.json">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+
+</head>
+<body>
+
+  <div id="top-bar">
+
+    <div class="top-group">
+      <button onclick="setPlayMode('normal')">通常</button>
+      <button onclick="setPlayMode('12tet')">12TET</button>
+      <button onclick="setPlayMode('chord')">コード</button>
+    </div>
+
+    <div class="top-group">
+      <button onclick="setScaleMode('12')">12音</button>
+      <button onclick="setScaleMode('7')">7音</button>
+    </div>
+
+    <div class="top-group">
+      <button onclick="octDown()">−</button>
+      <span id="oct-label">4</span>
+      <button onclick="octUp()">＋</button>
+    </div>
+
+    <!-- ▼ 音色選択追加（optgroup） -->
+    <div class="top-group">
+      <select id="wave-select" class="wave-select">
+        <optgroup label="基本波形">
+          <option value="sine">Pure Sine</option>
+          <option value="triangle">Triangle</option>
+          <option value="square">Square</option>
+          <option value="sawtooth">Saw</option>
+        </optgroup>
+
+        <optgroup label="アナログ系">
+          <option value="supersaw">SuperSaw</option>
+          <option value="pwm">PWM</option>
+          <option value="softpad">Soft Pad</option>
+        </optgroup>
+
+        <optgroup label="FMシンセ">
+          <option value="fm_bell">FM Bell</option>
+          <option value="fm_ep">FM Electric Piano</option>
+          <option value="fm_bass">FM Bass</option>
+          <option value="fm_lead">FM Lead</option>
+        </optgroup>
+
+        <optgroup label="ノイズ系">
+          <option value="noise_white">White Noise</option>
+          <option value="noise_pink">Pink Noise</option>
+          <option value="noise_brown">Brown Noise</option>
+        </optgroup>
+
+        <optgroup label="合成音">
+          <option value="flute_like">Flute-like</option>
+          <option value="violin_like">Violin-like</option>
+          <option value="hollow">Hollow</option>
+        </optgroup>
+      </select>
+    </div>
+
+    <div class="top-group">
+      <button onclick="toggleFullscreen()">全画面</button>
+    </div>
+
+  </div>
+
+  <div id="keyboard-area"></div>
+
+  <div id="bottom-bar">
+    <button onclick="startRecording()">● WAV REC</button>
+    <button onclick="stopRecording()">■ STOP</button>
+    <a id="downloadLink" style="display:none;">録音保存</a>
+  </div>
+
+  <script src="script.js"></script>
+</body>
+</html>

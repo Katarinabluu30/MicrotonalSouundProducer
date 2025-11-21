@@ -1,0 +1,119 @@
+html, body {
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+  background: #fdfdfd;
+}
+
+/* 上部バー */
+#top-bar {
+  height: 10vh;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 1.5vw;
+  box-sizing: border-box;
+}
+
+.top-group {
+  display: flex;
+  gap: 0.5vw;
+}
+
+#top-bar button {
+  padding: 0.3rem 0.8rem;
+  font-size: 0.9rem;
+  border-radius: 6px;
+}
+
+/* ▼ 音色選択のデザイン */
+.wave-select {
+  padding: 0.3rem 0.8rem;
+  font-size: 0.9rem;
+  border-radius: 6px;
+  border: 1px solid #aaa;
+  background: #fff;
+}
+
+/* 下部バー */
+#bottom-bar {
+  height: 10vh;
+  display: flex;
+  align-items: center;
+  gap: 1vw;
+  padding: 0 1.5vw;
+  box-sizing: border-box;
+}
+
+/* 鍵盤エリア */
+#keyboard-area {
+  height: 80vh;
+  width: 100vw;
+  display: grid;
+  grid-template-columns: repeat(var(--columns, 12), 1fr);
+  justify-items: center;
+  align-items: flex-start;
+  padding: 2vh 2vw 0 2vw;
+  box-sizing: border-box;
+  column-gap: 1.5vw;
+}
+
+.key-column {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+/* スライダートラック */
+.slider-track {
+  position: relative;
+  width: 8px;
+  height: 60vh;
+  background: #d0d0d0;
+  border-radius: 4px;
+}
+
+.slider-track::before {
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 36px;
+  height: 0;
+  border-top: 1px dashed #999;
+  transform: translate(-50%, -50%);
+}
+
+/* スライダー型ボタン */
+.slider-thumb {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  width: 70px;
+  height: 28px;
+  background: #9ad8ff;
+  border-radius: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  user-select: none;
+  touch-action: none;
+  font-weight: 600;
+}
+
+.cent-label {
+  margin-top: 0.5vh;
+  font-size: 0.8rem;
+}
+
+@media (max-width: 900px) {
+  #top-bar { font-size: 0.8rem; }
+  .slider-track { height: 55vh; }
+  .slider-thumb {
+    width: 60px;
+    height: 24px;
+  }
+}
