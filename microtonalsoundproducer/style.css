@@ -1,0 +1,119 @@
+html, body {
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+  background: #fdfdfd;
+}
+
+/* iPhoneの長押しコピー無効化 */
+* {
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+/* 上部バー */
+#top-bar {
+  height: 10vh;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0 1.5vw;
+}
+
+.top-group {
+  display: flex;
+  gap: 0.5vw;
+}
+
+#top-bar button {
+  padding: 0.3rem 0.8rem;
+  font-size: 0.9rem;
+}
+
+/* キーボードエリア */
+#keyboard-area {
+  width: 100vw;
+  height: 80vh;
+  display: grid;
+  grid-template-columns: repeat(var(--columns, 12), 1fr);
+  justify-items: center;
+  align-items: flex-start;
+  padding-top: 2vh;
+  column-gap: 1.5vw;
+}
+
+/* 1列 */
+.key-column {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+/*トラック*/
+.slider-track {
+  position: relative;
+  width: 12px;
+  height: 60vh;
+  background: #d0d0d0;
+  border-radius: 6px;
+  touch-action: none;
+}
+
+/* 中央の0cent ライン */
+.slider-track::before {
+  content: "";
+  position: absolute;
+  width: 36px;
+  height: 0px;
+  border-top: 1px dashed #999;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+}
+
+/* スライダー */
+.slider-thumb {
+  position: absolute;
+  width: 80px;
+  height: 30px;
+  background: #9ad8ff;
+  border-radius: 15px;
+  box-shadow: 0px 2px 4px rgba(0,0,0,0.25);
+  left: 50%;
+  transform: translateX(-50%);
+  top: 50%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+
+  font-weight: 600;
+  touch-action: none;
+}
+
+/* cent 表示 */
+.cent-label {
+  margin-top: 0.5vh;
+  font-size: 0.8rem;
+}
+
+/* 下部バー */
+#bottom-bar {
+  height: 10vh;
+  display: flex;
+  align-items: center;
+  gap: 1vw;
+  padding-left: 1vw;
+}
+
+/* スマホ向け */
+@media (max-width: 900px) {
+  .slider-thumb {
+    width: 65px;
+    height: 26px;
+  }
+  .slider-track {
+    height: 55vh;
+  }
+}
