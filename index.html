@@ -2,18 +2,14 @@
 <html lang="ja">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Microtonal Slider Buttons</title>
+  <meta name="viewport"
+        content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Microtonal Slider Keys</title>
   <link rel="stylesheet" href="style.css">
-  <link rel="manifest" href="manifest.json">
-<meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-
 </head>
 <body>
 
   <div id="top-bar">
-
     <div class="top-group">
       <button onclick="setPlayMode('normal')">通常</button>
       <button onclick="setPlayMode('12tet')">12TET</button>
@@ -31,47 +27,20 @@
       <button onclick="octUp()">＋</button>
     </div>
 
-    <!-- ▼ 音色選択追加（optgroup） -->
-    <div class="top-group">
-      <select id="wave-select" class="wave-select">
-        <optgroup label="基本波形">
-          <option value="sine">Pure Sine</option>
-          <option value="triangle">Triangle</option>
-          <option value="square">Square</option>
-          <option value="sawtooth">Saw</option>
-        </optgroup>
+    <select id="waveSelector" onchange="changeWave()">
+      <optgroup label="基本波形">
+        <option value="sine">Sine</option>
+        <option value="square">Square</option>
+        <option value="sawtooth">Saw</option>
+        <option value="triangle">Triangle</option>
+      </optgroup>
+      <optgroup label="柔らかめ">
+        <option value="softsaw">Soft Saw</option>
+        <option value="softsquare">Soft Square</option>
+      </optgroup>
+    </select>
 
-        <optgroup label="アナログ系">
-          <option value="supersaw">SuperSaw</option>
-          <option value="pwm">PWM</option>
-          <option value="softpad">Soft Pad</option>
-        </optgroup>
-
-        <optgroup label="FMシンセ">
-          <option value="fm_bell">FM Bell</option>
-          <option value="fm_ep">FM Electric Piano</option>
-          <option value="fm_bass">FM Bass</option>
-          <option value="fm_lead">FM Lead</option>
-        </optgroup>
-
-        <optgroup label="ノイズ系">
-          <option value="noise_white">White Noise</option>
-          <option value="noise_pink">Pink Noise</option>
-          <option value="noise_brown">Brown Noise</option>
-        </optgroup>
-
-        <optgroup label="合成音">
-          <option value="flute_like">Flute-like</option>
-          <option value="violin_like">Violin-like</option>
-          <option value="hollow">Hollow</option>
-        </optgroup>
-      </select>
-    </div>
-
-    <div class="top-group">
-      <button onclick="toggleFullscreen()">全画面</button>
-    </div>
-
+    <button onclick="toggleFullscreen()">全画面</button>
   </div>
 
   <div id="keyboard-area"></div>
