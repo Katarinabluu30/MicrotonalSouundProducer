@@ -122,12 +122,16 @@ function rebuild() {
     thumb.textContent = note;
     lab.textContent   = "0.0 cent";
 
-    // 12TETモードでは thumb を非表示にして track だけ残す
-    if (playMode === "12tet") {
-      thumb.style.display = "none";
-    } else {
-      thumb.style.display = "flex";
-    }
+    // --- 常にボタン（thumb）は表示する ---
+thumb.style.display = "flex";
+
+// --- 12TETのときは thumb を中央固定（スライダー無効化） ---
+if (playMode === "12tet") {
+    thumb.style.top = "50%";
+    label.textContent = "0.0 cent";
+}
+
+
 
     track.appendChild(thumb);
     col.appendChild(track);
