@@ -4,144 +4,74 @@
 const noteNames12 = ["C","C#","D","Eb","E","F","F#","G","G#","A","Bb","B"];
 const noteNames7  = ["C","D","E","F","G","A","B"];
 
-let scaleMode = "12";      // "12" or "7"
-let playMode  = "normal";  // "normal" | "chord" | "12tet"
-let octave    = 4;
+let scaleMode   = "12";      // "12" or "7"
+let playMode    = "normal";  // "normal", "12tet", "chord"
+let octave      = 4;
 let currentWave = "sine";
-const maxCent = 100;
+const maxCent   = 100;
 
 //--------------------------------------------------
-// Web Audio & WAVレコーダ
+// Audio
 //--------------------------------------------------
-const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+let audioCtx    = null;
+let masterGain  = null;
+const active    = {};   // { [noteName]: {osc, g} }
 
-// メイン音量
-const masterGain = audioCtx.createGain();
-masterGain.gain.value = 0.25;
-
-// --- WAV レコーダ（16bit PCM mono） ---
-class WavRecorder {
-  constructor(ctx) {
-    this.ctx = ctx;
-    this.buffer = [];
-    this.recording = false;
-
-    this.processor = ctx.createScriptProcessor(4096, 1, 1);
-    this.processor.onaudioprocess = (e) => {
-      if (!this.recording) return;
-      const input = e.inputBuffer.getChannelData(0);
-      this.buffer.push(new Float32Array(input));
-    };
-
-    this.input = this.processor;
-    this.processor.connect(ctx.destination);
+function initAudio() {
+  if (!audioCtx) {
+    audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    masterGain = audioCtx.createGain();
+    masterGain.gain.value = 0.3;
+    masterGain.connect(audioCtx.destination);
   }
-
-  start() {
-    this.buffer = [];
-    this.recording = true;
-  }
-
-  stop() {
-    this.recording = false;
-    return this.exportWav();
-  }
-
-  exportWav() {
-    const sampleRate = this.ctx.sampleRate;
-    const samples = this.buffer.reduce((sum, arr) => sum + arr.length, 0);
-    const bytesPerSample = 2; // 16bit
-    const dataSize = samples * bytesPerSample;
-
-    const buffer = new ArrayBuffer(44 + dataSize);
-    const view   = new DataView(buffer);
-
-    let offset = 0;
-    function writeString(s) {
-      for (let i = 0; i < s.length; i++) {
-        view.setUint8(offset++, s.charCodeAt(i));
-      }
-    }
-
-    // RIFF
-    writeString("RIFF");
-    view.setUint32(offset, 36 + dataSize, true); offset += 4;
-    writeString("WAVE");
-
-    // fmt
-    writeString("fmt ");
-    view.setUint32(offset, 16, true); offset += 4;
-    view.setUint16(offset, 1, true); offset += 2;   // PCM
-    view.setUint16(offset, 1, true); offset += 2;   // mono
-    view.setUint32(offset, sampleRate, true); offset += 4;
-    view.setUint32(offset, sampleRate * bytesPerSample, true); offset += 4;
-    view.setUint16(offset, bytesPerSample, true); offset += 2;
-    view.setUint16(offset, 8 * bytesPerSample, true); offset += 2;
-
-    // data
-    writeString("data");
-    view.setUint32(offset, dataSize, true); offset += 4;
-
-    // PCM データ
-    this.buffer.forEach(block => {
-      for (let i = 0; i < block.length; i++) {
-        const s = Math.max(-1, Math.min(1, block[i]));
-        const v = s < 0 ? s * 0x8000 : s * 0x7FFF;
-        view.setInt16(offset, v, true);
-        offset += 2;
-      }
-    });
-
-    return new Blob([view], { type: "audio/wav" });
+  if (audioCtx.state === "suspended") {
+    audioCtx.resume();
   }
 }
 
-// master → recorder → destination
-const recorder = new WavRecorder(audioCtx);
-masterGain.connect(recorder.input);
-
 //--------------------------------------------------
-// 発音管理
+// 周波数計算
 //--------------------------------------------------
-const active = {};   // noteName -> { osc, g, cent }
-
-const semiMap = {
+const semi = {
   "C":0,"C#":1,"D":2,"Eb":3,"E":4,"F":5,
   "F#":6,"G":7,"G#":8,"A":9,"Bb":10,"B":11
 };
 
-function freqOf(note, oct, cent) {
-  const semi = semiMap[note];
-  const midi = 12 * (oct + 1) + semi;
-
-  let c = cent;
-  if (playMode === "12tet") c = 0;
-
-  return 440 * Math.pow(2, (midi - 69) / 12 + c / 1200);
+function freq(note, oct, cent) {
+  const midi = 12 * (oct + 1) + semi[note];
+  if (playMode === "12tet") cent = 0;   // 12平均律モードでは常に cent=0
+  return 440 * Math.pow(2, (midi - 69) / 12 + cent / 1200);
 }
 
-function startNote(note, cent) {
+//--------------------------------------------------
+// 音開始・停止
+//--------------------------------------------------
+function startNote(note, cent = 0) {
+  initAudio();
   if (active[note]) return;
 
   const osc = audioCtx.createOscillator();
   const g   = audioCtx.createGain();
 
-  if (currentWave === "softsaw") {
-    osc.type = "sawtooth";
-    g.gain.value = 0.14;
-  } else if (currentWave === "softsquare") {
-    osc.type = "square";
-    g.gain.value = 0.12;
-  } else {
-    osc.type = currentWave; // sine / square / sawtooth / triangle
-    g.gain.value = 0.20;
+  switch (currentWave) {
+    case "softsaw":
+      osc.type = "sawtooth";
+      g.gain.value = 0.12;
+      break;
+    case "softsquare":
+      osc.type = "square";
+      g.gain.value = 0.10;
+      break;
+    default:
+      osc.type = currentWave;
+      g.gain.value = 0.18;
+      break;
   }
 
-  osc.frequency.value = freqOf(note, octave, cent);
+  osc.frequency.value = freq(note, octave, cent);
 
-  const now = audioCtx.currentTime;
-  g.gain.setValueAtTime(0, now);
-  g.gain.linearRampToValueAtTime(0.28, now + 0.03);
+  g.gain.value = 0;
+  g.gain.exponentialRampToValueAtTime(0.25, audioCtx.currentTime + 0.02);
 
   osc.connect(g).connect(masterGain);
   osc.start();
@@ -153,11 +83,9 @@ function stopNote(note) {
   const v = active[note];
   if (!v) return;
 
-  const now = audioCtx.currentTime;
-  v.g.gain.cancelScheduledValues(now);
-  v.g.gain.setTargetAtTime(0, now, 0.04);
-  v.osc.stop(now + 0.06);
-
+  const t = audioCtx.currentTime;
+  v.g.gain.setTargetAtTime(0, t, 0.03);
+  v.osc.stop(t + 0.05);
   delete active[note];
 }
 
@@ -165,7 +93,7 @@ function updateCent(note, cent) {
   const v = active[note];
   if (!v) return;
   v.cent = cent;
-  v.osc.frequency.value = freqOf(note, octave, cent);
+  v.osc.frequency.value = freq(note, octave, cent);
 }
 
 //--------------------------------------------------
@@ -173,96 +101,56 @@ function updateCent(note, cent) {
 //--------------------------------------------------
 function rebuild() {
   const area = document.getElementById("keyboard-area");
+  if (!area) return;
+
   area.innerHTML = "";
 
   const notes = (scaleMode === "12") ? noteNames12 : noteNames7;
   document.documentElement.style.setProperty("--columns", notes.length);
 
   notes.forEach(note => {
-    const col = document.createElement("div");
-    col.className = "key-column";
-
+    const col   = document.createElement("div");
     const track = document.createElement("div");
-    track.className = "slider-track";
-
     const thumb = document.createElement("div");
+    const lab   = document.createElement("div");
+
+    col.className   = "key-column";
+    track.className = "slider-track";
     thumb.className = "slider-thumb";
+    lab.className   = "cent-label";
+
     thumb.textContent = note;
+    lab.textContent   = "0.0 cent";
 
-    const label = document.createElement("div");
-    label.className = "cent-label";
-    label.textContent = "0.0 cent";
+    // 12TETモードでは thumb を非表示にして track だけ残す
+    if (playMode === "12tet") {
+      thumb.style.display = "none";
+    } else {
+      thumb.style.display = "flex";
+    }
 
-    col.appendChild(track);
     track.appendChild(thumb);
-    col.appendChild(label);
+    col.appendChild(track);
+    col.appendChild(lab);
     area.appendChild(col);
 
-    attachSlider(note, thumb, track, label);
+    bindSlider(note, thumb, track, lab);
   });
 }
 
 //--------------------------------------------------
-// スライダー & 鍵盤挙動
+// スライダー挙動
 //--------------------------------------------------
-function attachSlider(note, thumb, track, label) {
+function bindSlider(note, thumb, track, label) {
+  let dragging      = false;
+  let draggingTarget = null;   // "thumb" or "track"
+  let pid           = null;
 
-  //------------------------------------------------
-  // ① 12TETモード → 鍵盤ボタンだけ（ピッチベンドなし）
-  //------------------------------------------------
-  if (playMode === "12tet") {
-    // 見た目はそのまま、中央固定・cent表示なし
-    thumb.style.top = "50%";
-    label.textContent = "";
-
-    function keyDown(e) {
-      audioCtx.resume();
-      e.preventDefault();
-
-      if (playMode === "chord") {
-        // トグルON/OFF
-        if (active[note]) {
-          stopNote(note);
-          thumb.classList.remove("chord-active");
-        } else {
-          startNote(note, 0);
-          thumb.classList.add("chord-active");
-        }
-      } else { // normal
-        if (!active[note]) startNote(note, 0);
-      }
-    }
-
-    function keyUp(e) {
-      if (playMode === "normal") {
-        stopNote(note);
-      }
-    }
-
-    // thumb & track どちらを押しても同じ
-    ["pointerdown"].forEach(ev => {
-      thumb.addEventListener(ev, keyDown);
-      track.addEventListener(ev, keyDown);
-    });
-    ["pointerup","pointercancel"].forEach(ev => {
-      thumb.addEventListener(ev, keyUp);
-      track.addEventListener(ev, keyUp);
-    });
-
-    return;
-  }
-
-  //------------------------------------------------
-  // ② normal / chord モード → スライダーあり
-  //------------------------------------------------
-  let dragging = false;
-  let pointerId = null;
-
-  function calc(eY) {
-    const rect = track.getBoundingClientRect();
-    let y = Math.min(rect.bottom, Math.max(rect.top, eY));
-    const t = (y - rect.top) / rect.height;      // 0〜1
-    const cent = (0.5 - t) * 2 * maxCent;        // -100〜+100
+  function calc(y) {
+    const r = track.getBoundingClientRect();
+    y = Math.max(r.top, Math.min(r.bottom, y));
+    const t    = (y - r.top) / r.height;
+    const cent = (0.5 - t) / 0.5 * maxCent;  // 中央0, 上+maxCent, 下-maxCent
     return { t, cent };
   }
 
@@ -272,21 +160,13 @@ function attachSlider(note, thumb, track, label) {
     updateCent(note, cent);
   }
 
-  // 初期化
-  thumb.style.display = "flex";
-  thumb.style.top = "50%";
-  label.textContent = "0.0 cent";
-
-  // ---- pointerdown（normal:ドラッグ開始 / chord:トグル＆ドラッグ開始） ----
-  thumb.addEventListener("pointerdown", (e) => {
-    audioCtx.resume();
-    e.preventDefault();
-
-    dragging = true;
-    pointerId = e.pointerId;
-    thumb.setPointerCapture(pointerId);
-
+  //------------------------------------------------
+  // thumb: pointerdown
+  //------------------------------------------------
+  thumb.addEventListener("pointerdown", e => {
+    // コードモード：ON/OFFトグルのみ（押しっぱなしで鳴り続ける）
     if (playMode === "chord") {
+      initAudio();
       if (active[note]) {
         stopNote(note);
         thumb.classList.remove("chord-active");
@@ -294,141 +174,210 @@ function attachSlider(note, thumb, track, label) {
         startNote(note, 0);
         thumb.classList.add("chord-active");
       }
-    } else { // normal
-      if (!active[note]) startNote(note, 0);
+      return;
     }
+
+    // normal / 12tet モード：押している間だけ鳴らす
+    initAudio();
+    dragging       = true;
+    draggingTarget = "thumb";
+    pid            = e.pointerId;
+    thumb.setPointerCapture(pid);
+
+    if (!active[note]) startNote(note, 0);
   });
 
-  // ---- pointermove（どちらのモードでもピッチベンド） ----
-  thumb.addEventListener("pointermove", (e) => {
-    if (!dragging || e.pointerId !== pointerId) return;
+  //------------------------------------------------
+  // thumb: pointermove（normalでスライダー変更）
+  //------------------------------------------------
+  thumb.addEventListener("pointermove", e => {
+    if (!dragging || pid !== e.pointerId) return;
+    if (draggingTarget !== "thumb") return;
+
+    // 12TETモードでは pitch 変化しないのでスライダーも動かさない
+    if (playMode === "12tet") return;
+
     const { t, cent } = calc(e.clientY);
     apply(t, cent);
   });
 
-  // ---- pointerup / cancel ----
-  function endDrag(e) {
-    if (!dragging || e.pointerId !== pointerId) return;
+  //------------------------------------------------
+  // thumb: pointerup
+  //------------------------------------------------
+  thumb.addEventListener("pointerup", e => {
+    if (!dragging || pid !== e.pointerId) return;
+    if (draggingTarget !== "thumb") return;
 
-    dragging = false;
-    thumb.releasePointerCapture(pointerId);
-    pointerId = null;
+    dragging       = false;
+    draggingTarget = null;
+    thumb.releasePointerCapture(pid);
+    pid = null;
 
-    if (playMode === "chord") {
-      // chordは音を保持、スライダー位置も保持
-      return;
-    }
+    // chord モードは上で return 済みなのでここには来ない
 
-    // normal → 0centへ戻して停止
-    thumb.style.transition = "top 0.15s";
-    thumb.style.top = "50%";
-    setTimeout(() => thumb.style.transition = "", 160);
+    // normal / 12tet → ボタンを離したらリセット＆停止
+    thumb.style.transition = "top .15s";
+    thumb.style.top        = "50%";
+    setTimeout(() => thumb.style.transition = "", 150);
 
     label.textContent = "0.0 cent";
     updateCent(note, 0);
     stopNote(note);
-  }
+  });
 
-  thumb.addEventListener("pointerup", endDrag);
-  thumb.addEventListener("pointercancel", endDrag);
+  thumb.addEventListener("pointercancel", e => {
+    if (!dragging || pid !== e.pointerId) return;
+    dragging       = false;
+    draggingTarget = null;
+    thumb.releasePointerCapture(pid);
+    pid = null;
 
-  // ---- trackタップで瞬時にそのcentへ（両モード対応） ----
-  track.addEventListener("pointerdown", (e) => {
-    audioCtx.resume();
-    e.preventDefault();
+    if (playMode === "chord") return;
 
-    if (!active[note]) {
-      if (playMode === "chord") {
-        startNote(note, 0);
-        thumb.classList.add("chord-active");
-      } else {
-        startNote(note, 0);
-      }
+    thumb.style.transition = "top .15s";
+    thumb.style.top        = "50%";
+    setTimeout(() => thumb.style.transition = "", 150);
+
+    label.textContent = "0.0 cent";
+    updateCent(note, 0);
+    stopNote(note);
+  });
+
+  //------------------------------------------------
+  // track: pointerdown
+  //  - normal/12tet: 押している間だけ鳴る
+  //  - chord: ON になっている音のピッチだけ変える
+  //------------------------------------------------
+  track.addEventListener("pointerdown", e => {
+    initAudio();
+
+    if (playMode !== "chord") {
+      // normal / 12TET → 押している間だけ鳴らす
+      if (!active[note]) startNote(note, 0);
     }
+    // chordモードでは、すでにONの時だけ音を鳴らしながら
+    // スライダーを動かす（active[note] が無ければ無音で位置だけ変える）
+
+    dragging       = true;
+    draggingTarget = "track";
+    pid            = e.pointerId;
+    track.setPointerCapture(pid);
+
+    if (playMode !== "12tet") {
+      const { t, cent } = calc(e.clientY);
+      apply(t, cent);
+    }
+  });
+
+  //------------------------------------------------
+  // track: pointermove
+  //------------------------------------------------
+  track.addEventListener("pointermove", e => {
+    if (!dragging || pid !== e.pointerId) return;
+    if (draggingTarget !== "track") return;
+
+    if (playMode === "12tet") return; // 12TET は cent を変えない
 
     const { t, cent } = calc(e.clientY);
     apply(t, cent);
+  });
 
-    // normal のショートタップは短く鳴らして戻す
-    if (playMode === "normal") {
-      setTimeout(() => {
-        thumb.style.transition = "top 0.15s";
-        thumb.style.top = "50%";
-        setTimeout(() => thumb.style.transition = "", 160);
-        label.textContent = "0.0 cent";
-        updateCent(note, 0);
-        stopNote(note);
-      }, 120);
+  //------------------------------------------------
+  // track: pointerup
+  //------------------------------------------------
+  track.addEventListener("pointerup", e => {
+    if (!dragging || pid !== e.pointerId) return;
+    if (draggingTarget !== "track") return;
+
+    dragging       = false;
+    draggingTarget = null;
+    track.releasePointerCapture(pid);
+    pid = null;
+
+    if (playMode === "chord") {
+      // chordモードではスライダー位置とcent値は保持したまま
+      return;
     }
+
+    // normal / 12TET はボタンを離したらリセット＆停止
+    thumb.style.transition = "top .15s";
+    thumb.style.top        = "50%";
+    setTimeout(() => thumb.style.transition = "", 150);
+
+    label.textContent = "0.0 cent";
+    updateCent(note, 0);
+    stopNote(note);
+  });
+
+  track.addEventListener("pointercancel", e => {
+    if (!dragging || pid !== e.pointerId) return;
+    if (draggingTarget !== "track") return;
+
+    dragging       = false;
+    draggingTarget = null;
+    track.releasePointerCapture(pid);
+    pid = null;
+
+    if (playMode === "chord") return;
+
+    thumb.style.transition = "top .15s";
+    thumb.style.top        = "50%";
+    setTimeout(() => thumb.style.transition = "", 150);
+
+    label.textContent = "0.0 cent";
+    updateCent(note, 0);
+    stopNote(note);
   });
 }
 
 //--------------------------------------------------
-// モード切り替え / スケール切り替え
+// モード切替
 //--------------------------------------------------
-function setPlayMode(mode) {
-  playMode = mode;
+function setPlayMode(m) {
+  playMode = m;
   rebuild();
 }
 
-function setScaleMode(mode) {
-  scaleMode = mode; // "12" or "7"
+function setScaleMode(m) {
+  scaleMode = m;
   rebuild();
 }
 
-//--------------------------------------------------
-// オクターブ
-//--------------------------------------------------
+function changeWave() {
+  const sel = document.getElementById("waveSelector");
+  if (!sel) return;
+  currentWave = sel.value;
+}
+
 function octUp() {
   octave++;
-  document.getElementById("oct-label").textContent = octave;
+  const lab = document.getElementById("oct-label");
+  if (lab) lab.textContent = octave;
 }
+
 function octDown() {
   octave--;
-  document.getElementById("oct-label").textContent = octave;
+  const lab = document.getElementById("oct-label");
+  if (lab) lab.textContent = octave;
 }
 
 //--------------------------------------------------
-// 波形変更
+// unlockAudio（Safari / iPhone 用）
 //--------------------------------------------------
-function changeWave() {
-  currentWave = document.getElementById("waveSelector").value;
-}
-
-//--------------------------------------------------
-// フルスクリーン
-//--------------------------------------------------
-function toggleFullscreen() {
-  if (!document.fullscreenElement) {
-    document.documentElement.requestFullscreen();
-  } else {
-    document.exitFullscreen();
-  }
-}
-
-//--------------------------------------------------
-// WAV録音
-//--------------------------------------------------
-function startRecording() {
-  audioCtx.resume();
-  recorder.start();
-  console.log("WAV Recording Start");
-}
-
-function stopRecording() {
-  const blob = recorder.stop();
-  console.log("WAV Recording Stop");
-
-  const url  = URL.createObjectURL(blob);
-  const link = document.getElementById("downloadLink");
-  link.href = url;
-  link.download = "recording.wav";
-  link.style.display = "inline-block";
-  link.textContent = "recording.wav を保存";
+function unlockAudio() {
+  initAudio();
+  const unlock = document.getElementById("unlock");
+  const topBar = document.getElementById("top-bar");
+  if (unlock) unlock.style.display = "none";
+  if (topBar) topBar.style.display = "flex";
+  rebuild();
 }
 
 //--------------------------------------------------
 // 初期化
 //--------------------------------------------------
-document.getElementById("oct-label").textContent = octave;
-rebuild();
+window.addEventListener("DOMContentLoaded", () => {
+  const lab = document.getElementById("oct-label");
+  if (lab) lab.textContent = octave;
+  rebuild();
+});

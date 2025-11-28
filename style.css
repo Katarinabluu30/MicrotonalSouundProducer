@@ -2,89 +2,89 @@ html, body {
   margin: 0;
   padding: 0;
   overflow: hidden;
-  user-select: none;
   -webkit-user-select: none;
-  -webkit-touch-callout: none;
+  user-select: none;
   font-family: system-ui, sans-serif;
 }
 
-/* top */
+/* unlock overlay */
+#unlock {
+  position: fixed;
+  top:0; left:0;
+  width:100vw; height:100vh;
+  background:white;
+  display:flex;
+  justify-content:center;
+  align-items:center;
+  font-size:2rem;
+  z-index:9999;
+}
+
 #top-bar {
   height: 10vh;
   display: flex;
-  align-items: center;
   gap: 1vw;
+  align-items: center;
   padding: 0 1vw;
 }
 
-/* keyboard */
 #keyboard-area {
-  height: 80vh;
+  height: 90vh;
   display: grid;
   grid-template-columns: repeat(var(--columns, 12), 1fr);
-  align-items: flex-start;
-  justify-items: center;
   padding-top: 2vh;
+  justify-items: center;
 }
 
 .key-column {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
+  display:flex; flex-direction:column; align-items:center;
 }
 
 .slider-track {
   width: 12px;
-  height: 58vh;
-  background: #d0d0d0;
-  border-radius: 6px;
-  position: relative;
+  height: 60vh;
+  background:#ddd;
+  border-radius:6px;
+  position:relative;
 }
 
-/* 12TET のときは非表示 */
 .slider-track.hidden {
-  background: transparent;
-  height: 58vh;
+  background:transparent;
+}
+.slider-track.hidden .slider-thumb,
+.slider-track.hidden::before {
+  display:none;
 }
 
-.slider-track.hidden::before,
-.slider-track.hidden .slider-thumb {
-  display: none;
-}
-
-/* baseline */
 .slider-track::before {
-  content: "";
-  position: absolute;
-  left: 50%;
-  top: 50%;
-  width: 40px;
-  border-top: 1px dashed #999;
-  transform: translate(-50%, -50%);
+  content:"";
+  position:absolute;
+  top:50%; left:50%;
+  width:40px;
+  border-top:1px dashed #888;
+  transform:translate(-50%, -50%);
 }
 
 .slider-thumb {
-  position: absolute;
-  left: 50%;
-  top: 50%;
-  transform: translate(-50%, -50%);
-  width: 70px;
-  height: 28px;
-  background: #9ad8ff;
-  border-radius: 14px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-weight: bold;
-  box-shadow: 0 2px 4px rgba(0,0,0,0.3);
-  touch-action: none;
+  position:absolute;
+  left:50%; top:50%;
+  transform:translate(-50%,-50%);
+  width:70px; height:28px;
+  background:#9ad8ff;
+  border-radius:14px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  font-weight:bold;
+  box-shadow:0 2px 4px rgba(0,0,0,0.3);
+  touch-action:none;
 }
 
 .cent-label {
-  margin-top: 0.4rem;
+  margin-top: 0.3rem;
   font-size: 0.8rem;
 }
 
 .chord-active {
-  background-color: #ffd37f !important;
+  background:#FFCC66 !important;
 }
