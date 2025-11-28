@@ -5,15 +5,16 @@
   <meta name="viewport"
         content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>Microtonal Keys</title>
-  <link rel="stylesheet" href="style.css?v=2001">
+  <link rel="stylesheet" href="style.css?v=3003">
 </head>
 <body>
 
-<!-- Safari / iPhone 対応：最初にタップして音を解放 -->
+<!-- Safari / iPhone / Android すべて対応：最初のタップで AudioContext を有効化 -->
 <div id="unlock" onclick="unlockAudio()">
   画面をタップして音を有効化
 </div>
 
+<!-- unlockAudio() が成功したら表示される -->
 <div id="top-bar" style="display:none;">
   <button onclick="setPlayMode('normal')">通常</button>
   <button onclick="setPlayMode('12tet')">12TET</button>
@@ -42,8 +43,11 @@
   <button onclick="toggleFullscreen()">全画面</button>
 </div>
 
+<!-- キーボード本体 -->
 <div id="keyboard-area"></div>
 
-<script src="script.js"></script>
+<!-- JS 読み込み -->
+<script src="script.js?v=3003"></script>
+
 </body>
 </html>
